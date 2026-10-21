@@ -1,21 +1,83 @@
-RESTful API endpoint(s) in .NET Core that can be used to display a list of open
-brewery names, cities and phone numbers using the following backend data source -
-https://www.openbrewerydb.org/documentation.
+# BreweryAPI
 
-a. Implemented In-Memory storage
+A versioned ASP.NET Core REST API that retrieves brewery data from [OpenBreweryDB](https://www.openbrewerydb.org/documentation), maps it to a consistent application model, and exposes searchable, sortable, paginated results.
 
-b. Implemented Classes and Interfaces
+## Technology stack
 
-c. Implemented Dependency Injection
+- **C# / ASP.NET Core 3.1** web API
+- **Entity Framework Core 3.1** with **SQLite** persistence
+- ASP.NET Core **dependency injection** and typed `HttpClient`
+- `System.Net.Http.Json` for upstream JSON deserialization
+- ASP.NET Core **in-memory caching** (`IMemoryCache`)
+- URL-segment **API versioning** with `Microsoft.AspNetCore.Mvc.Versioning`
+- **MSTest**, **Moq**, and **coverlet** for automated tests and coverage collection
+- Console and Debug logging through `Microsoft.Extensions.Logging`
 
-d. API has sorting by brewery name, distance and city
+## Features
 
-e. API has search functionality
+- `GET /api/v1/breweries` endpoint for brewery results
+- `GET /api/v1/breweries/autocomplete` endpoint for brewery-name suggestions
+- Search across brewery name, city, and phone number
+- Filter by city
+- Sort by brewery name, city, or calculated distance
+- Ascending and descending sort order
+- Optional origin latitude and longitude for distance calculations in kilometers
+- Pagination with a configurable page size capped at 200 results
+- Mapping from OpenBreweryDB responses to the API's generic `ItemDto` model
+- Ten-minute caching to limit calls to the upstream brewery service
+- Optional SQLite-backed repository that refreshes persisted brewery data at most once every ten minutes
+- Cancellation-token support for asynchronous API and data-access operations
+- Structured error handling for upstream failures and unexpected server errors
+- Separation of controllers, services, repositories, interfaces, models, mapping, and persistence concerns
+- Service-level test coverage for distance calculation and distance sorting
 
-f. API map/transform source data to a generic data model
+## API examples
 
-g. Cache results for 10 minutes (IE: only make the call to the source API every 10 minutes
+### List breweries
 
-h. Architecture implements SOLID principles
+```http
+GET /api/v1/breweries?page=1&pageSize=25
+```
 
-i. Added error handling
+### Search and filter
+
+```http
+GET /api/v1/breweries?search=coffee&city=Portland
+```
+
+### Sort by distance
+
+```http
+GET /api/v1/breweries?sortBy=distance&sortOrder=asc&originLat=45.5152&originLon=-122.6784
+```
+
+### Autocomplete
+
+```http
+GET /api/v1/breweries/autocomplete?term=stone&limit=10
+```
+
+## Data source
+
+Brewery data is provided by [OpenBreweryDB](https://www.openbrewerydb.org/documentation). The API requests brewery records, transforms the source response, and returns the fields required by the application, including brewery name, city, phone number, coordinates, and calculated distance when an origin is supplied.
+
+## Project structure
+
+- `BreweryAPI/Controllers` — versioned HTTP endpoints
+- `BreweryAPI/Services` — business logic, repositories, caching, and service interfaces
+- `BreweryAPI/Models` — request, response, and DTO models
+- `BreweryAPI/Infrastructure/Persistence` — EF Core SQLite context
+- `BreweryTest` — MSTest unit tests using Moq
+
+## Running locally
+
+The solution targets `netcoreapp3.1` and contains the API and test projects.
+
+```bash
+dotnet restore
+dotnet build
+dotnet test
+dotnet run --project BreweryAPI/BreweryAPI.csproj
+```
+
+The SQLite connection string is configured in `BreweryAPI/appsettings.json` and uses `brewery.db` as the local database file.
